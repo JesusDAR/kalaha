@@ -210,101 +210,91 @@ public class AIClient implements Runnable
      * @param currentBoard The current board state
      * @return Move to make (1-6)
      */
-   	public int getMove(GameState currentBoard){
-	      int AICliente_Score = currentBoard.getScore(player);
-	      int bestMove = getRandom();
-	      for(int i=1; i<= currentBoard.getNoValidMoves(player); i++){
-		  //copy the original game state. 
-		  GameState newState = currentBoard.clone();
-		  newState.makeMove(i);
-		  double searchTimeLimit = 5; /*put the max time to spend looking at
-					       each move*
-		  */
-
-		  int score = IterativeDeepeningSearch(newState, searchTimeLimit);
-		  /*if the deepening search find a good movement/good score for our AI, 
-		  make the move*/
-		  if(newState.getWinner()==player){
-		      return i;
-		  }
-
-		  if(score > AICliente_Score){
-		      AICliente_Score = score;
-		      bestMove = i;
-		  } 
-	    }
+   	public int getMove(GameState currentBoard)
+    {
+        int AICliente_Score = currentBoard.getScore(player);
+        int bestMove = getRandom();
+        for(int i=1; i<= currentBoard.getNoValidMoves(player); i++)
+        {
+            GameState newState = currentBoard.clone(); //copy the original game state.
+            newState.makeMove(i);
+            double searchTimeLimit = 5; //put the max time to spend looking at each move
+            int score = IterativeDeepeningSearch(newState, searchTimeLimit);
+            if(newState.getWinner()==player) //if the deepening search find a good movement/good score for our AI, make the move
+                return i;
+            if(score > AICliente_Score)
+            {
+              AICliente_Score = score;
+              bestMove = i;
+            }
+        }
         return bestMove;
-    	}
-    	   //do iterative deepening searching for the score, calling the minimax to find it.	
-	    public int IterativeDeepeningSearch(GameState state, double maxTime ){
+    }
+    //do iterative deepening searching for the score, calling the minimax to find it.
+    private int IterativeDeepeningSearch(GameState state, double maxTime )
+    {
 		double startTime = System.currentTimeMillis()/1000;
 		int depth = 0; //before was depth = 4 for the C grade, and we decrease;
 		int score = 0;
-		while (startTime<=maxTime){
-		    int result = 
-		    Minimax_AlphaBeta(state, depth, Integer.MAX_VALUE, 
-			    Integer.MIN_VALUE,
-			   startTime, maxTime);
-		    //if the minimax find a result where our AI win, stop searching
-		   if(state.getWinner()==player){
-		       return result;
-		   }
-		   //if not is a good result for our ID, increase the depth
-		   depth++;
+		while (startTime<=maxTime)
+		{
+            int result = Minimax_AlphaBeta(state, depth, Integer.MAX_VALUE, Integer.MIN_VALUE, startTime, maxTime);
+		    if(state.getWinner()==player) //if the minimax find a result where our AI win, stop searching
+		        return result;
+            depth++; //if not is a good result for our ID, increase the depth
 		}
-
 		return score;
-	    }
+    }
 
 	    //perform minimax search with alpha-beta pruning. 
-	    public int Minimax_AlphaBeta(GameState currentState, int depth,
-		    int alpha, int beta, double startTime, double endTime){
+    private int Minimax_AlphaBeta(GameState currentState, int depth, int alpha, int beta, double startTime, double endTime)
+    {
 		double currentTime = System.currentTimeMillis()/1000;
 		double leftTime = (currentTime - startTime);
 		int savedScore = currentState.getScore(player);
-		if(leftTime<=endTime){
-		//If is a terminal node or the game ends, return score
-		if ((depth==0)|| currentState.gameEnded() ){
-		    return savedScore;
-		}else{
-		    //if there are still movements for our AI client
-		    if (currentState.getNoValidMoves(player)!=0){
-			for(int i=1; i<= currentState.getNoValidMoves(player); i++){
-			    GameState childState = currentState.clone();
-			    if(childState.makeMove(i)){
-			    childState.makeMove(i);
-			    }
-			    alpha = Math.max(alpha, 
-			    Minimax_AlphaBeta(childState, depth-1, alpha, beta,
-				    startTime, endTime));  
-			    if (beta<=alpha){
-				break;
-			    }    
-			  return alpha;  
-			}
-		    //if there aren't any movements for or AI, we would find the min.
-		    }else{
-			int oponent = currentState.getNextPlayer();
-			for(int i=1; i<= currentState.getNoValidMoves(oponent); i++){
-			    GameState childState = currentState.clone();
-			    childState.makeMove(i);
-
-			    beta = Math.min(beta, 
-				    Minimax_AlphaBeta(childState, depth-1, alpha, beta,
-				    startTime, endTime ));
-
-			   if(beta<=alpha){
-			       break;
-			   }
-			 return beta;
-			}
-		    }
-		   }
-		}else{
+		if(leftTime<=endTime)
+		{
+            //If is a terminal node or the game ends, return score
+            if ((depth==0)|| currentState.gameEnded() )
+                return savedScore;
+            else
+            {
+                //if there are still movements for our AI client
+                if (currentState.getNoValidMoves(player)!=0)
+                {
+                    for(int i=1; i<= currentState.getNoValidMoves(player); i++)
+                    {
+                        GameState childState = currentState.clone();
+                        if(childState.makeMove(i))
+                            childState.makeMove(i);
+                        alpha = Math.max(alpha, Minimax_AlphaBeta(childState, depth-1, alpha, beta, startTime, endTime));
+                        if (beta<=alpha)
+                            break;
+                        return alpha;
+                    }
+                //if there aren't any movements for or AI, we would find the min.
+                }
+                else
+                {
+                    int oponent = currentState.getNextPlayer();
+                    for(int i=1; i<= currentState.getNoValidMoves(oponent); i++)
+                    {
+                        GameState childState = currentState.clone();
+                        childState.makeMove(i);
+                        beta = Math.min(beta, Minimax_AlphaBeta(childState, depth-1, alpha, beta, startTime, endTime ));
+                        if(beta<=alpha)
+                            break;
+                        return beta;
+                    }
+                }
+            }
+		}
+		else
+        {
 		    return savedScore;
 		}
 		return savedScore; 
-	    }
+    }
     
     
     /**
