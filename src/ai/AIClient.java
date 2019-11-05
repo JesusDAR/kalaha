@@ -3,7 +3,14 @@ package ai;
 import ai.Global;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+
 import javax.swing.*;
+import javax.swing.text.html.MinimalHTMLWriter;
+
 import java.awt.*;
 import kalaha.*;
 
@@ -24,6 +31,11 @@ public class AIClient implements Runnable
     private Socket socket;
     private boolean running;
     private boolean connected;
+    
+    private PrintWriter openingBook;
+    private int winner = -1;
+    private String fileString = "";
+    private ArrayList<ArrayList<Integer>> array;
     	
     /**
      * Creates a new client.
@@ -51,6 +63,22 @@ public class AIClient implements Runnable
             addText("Unable to connect to server");
             return;
         }
+        
+        try {
+        	fileString = new String(Files.readAllBytes(Paths.get("openingBook.data")), StandardCharsets.UTF_8);
+            
+        	/*openingBook = new PrintWriter("openingBook.data", "UTF-8");
+            openingBook.append(fileString);
+            openingBook.close();*/
+		} catch (FileNotFoundException | UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+        array = new ArrayList<ArrayList<Integer>>();
     }
     
     /**
@@ -133,10 +161,12 @@ public class AIClient implements Runnable
                     if (w == player)
                     {
                         addText("I won!");
+                        winner = player;
                     }
                     else
                     {
                         addText("I lost...");
+                        winner = player==1?2:1;
                     }
                     running = false;
                 }
@@ -144,6 +174,7 @@ public class AIClient implements Runnable
                 {
                     addText("Even game!");
                     running = false;
+                    winner = 0;
                 }
 
                 //Check if it is my turn. If so, do a move
@@ -191,6 +222,15 @@ public class AIClient implements Runnable
             running = false;
         }
         
+        // FOR CREATING THE OPENING BOOK
+    	/*try {
+			openingBook = new PrintWriter("openingBook.data", "UTF-8");
+			openingBook.append(fileString+(winner==0?"draw":(winner==player?"ai":"opponent"))+"\n#");
+	        openingBook.close();
+		} catch (FileNotFoundException | UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}*/
+        
         try
         {
             socket.close();
@@ -210,92 +250,12 @@ public class AIClient implements Runnable
      * @param currentBoard The current board state
      * @return Move to make (1-6)
      */
-   	public int getMove(GameState currentBoard)
+    public int getMove(GameState currentBoard)
     {
-        int AICliente_Score = currentBoard.getScore(player);
-        int bestMove = getRandom();
-        for(int i=1; i<= currentBoard.getNoValidMoves(player); i++)
-        {
-            GameState newState = currentBoard.clone(); //copy the original game state.
-            newState.makeMove(i);
-            double searchTimeLimit = 5; //put the max time to spend looking at each move
-            int score = IterativeDeepeningSearch(newState, searchTimeLimit);
-            if(newState.getWinner()==player) //if the deepening search find a good movement/good score for our AI, make the move
-                return i;
-            if(score > AICliente_Score)
-            {
-              AICliente_Score = score;
-              bestMove = i;
-            }
-        }
-        return bestMove;
+        //int myMove = nextMoveMinimaxDFS(currentBoard, true, 0, 4);
+        int myMove = nextMoveIterativeDeepening(currentBoard, 5);
+        return myMove;
     }
-    //do iterative deepening searching for the score, calling the minimax to find it.
-    private int IterativeDeepeningSearch(GameState state, double maxTime )
-    {
-		double startTime = System.currentTimeMillis()/1000;
-		int depth = 0; //before was depth = 4 for the C grade, and we decrease;
-		int score = 0;
-		while (startTime<=maxTime)
-		{
-            int result = Minimax_AlphaBeta(state, depth, Integer.MAX_VALUE, Integer.MIN_VALUE, startTime, maxTime);
-		    if(state.getWinner()==player) //if the minimax find a result where our AI win, stop searching
-		        return result;
-            depth++; //if not is a good result for our ID, increase the depth
-		}
-		return score;
-    }
-
-	    //perform minimax search with alpha-beta pruning. 
-    private int Minimax_AlphaBeta(GameState currentState, int depth, int alpha, int beta, double startTime, double endTime)
-    {
-		double currentTime = System.currentTimeMillis()/1000;
-		double leftTime = (currentTime - startTime);
-		int savedScore = currentState.getScore(player);
-		if(leftTime<=endTime)
-		{
-            //If is a terminal node or the game ends, return score
-            if ((depth==0)|| currentState.gameEnded() )
-                return savedScore;
-            else
-            {
-                //if there are still movements for our AI client
-                if (currentState.getNoValidMoves(player)!=0)
-                {
-                    for(int i=1; i<= currentState.getNoValidMoves(player); i++)
-                    {
-                        GameState childState = currentState.clone();
-                        if(childState.makeMove(i))
-                            childState.makeMove(i);
-                        alpha = Math.max(alpha, Minimax_AlphaBeta(childState, depth-1, alpha, beta, startTime, endTime));
-                        if (beta<=alpha)
-                            break;
-                        return alpha;
-                    }
-                //if there aren't any movements for or AI, we would find the min.
-                }
-                else
-                {
-                    int oponent = currentState.getNextPlayer();
-                    for(int i=1; i<= currentState.getNoValidMoves(oponent); i++)
-                    {
-                        GameState childState = currentState.clone();
-                        childState.makeMove(i);
-                        beta = Math.min(beta, Minimax_AlphaBeta(childState, depth-1, alpha, beta, startTime, endTime ));
-                        if(beta<=alpha)
-                            break;
-                        return beta;
-                    }
-                }
-            }
-		}
-		else
-        {
-		    return savedScore;
-		}
-		return savedScore; 
-    }
-    
     
     /**
      * Returns a random ambo number (1-6) used when making
@@ -306,5 +266,126 @@ public class AIClient implements Runnable
     public int getRandom()
     {
         return 1 + (int)(Math.random() * 6);
+    }
+    
+   
+    private int evaluation(GameState board, boolean max)
+    {
+    	int oponent = (player == 1? 2 : 1);
+    	return board.getScore(player) - board.getScore(oponent);
+    }
+    
+    private class MinMaxReturn
+    {
+    	private int score_move = 1;
+    	private boolean outOfTree = false;
+    	private boolean endOfTree = false;
+    	
+    	public MinMaxReturn(int score_move, boolean outOfTree, boolean endOfTree)
+    	{
+    	   this.score_move = score_move;
+    	   this.outOfTree = outOfTree;
+    	   this.endOfTree = endOfTree;
+    	}
+    }
+    
+   
+   
+    
+    private int nextMoveIterativeDeepening(GameState currentBoard, int time_seconds)
+    {
+
+    	int move = 1;
+    	int level = 1;
+    	
+    	long startTime = System.currentTimeMillis();
+    	long time_in_millis = (long)(time_seconds * 1000);
+    	while(System.currentTimeMillis() - startTime < time_in_millis)
+    	{
+    		MinMaxReturn result = nextMoveMinimaxDFS(currentBoard, true, 0, level, startTime, time_in_millis, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    		// The time have run out, return and use the move from the one level above the tree. 
+    		if (!result.outOfTree)
+    			move = result.score_move;
+    		// The tree can not grow anymore.
+    		if (result.endOfTree)
+    			break;
+    		level++;
+    	}
+    	//saveMove(move, currentBoard);
+    	return move;
+    }
+    
+    /**
+     * Use a minmax tree with Depth-First search
+     * 
+     * @param currentBoard The current game state
+     * @param max If the player is the AI or the opponent
+     * @param level The current level in the minmax tree
+     * @param toLevel Max depth of the minmax tree
+     * @return The move the AI should use
+     */
+    private MinMaxReturn nextMoveMinimaxDFS(GameState currentBoard, boolean max, int level, int toLevel, long startTime,
+    		long time_in_millis, int alpha_score, int beta_score)
+    {
+    	if (level == toLevel)
+    		return new MinMaxReturn(evaluation(currentBoard, max), false, false);
+    	
+    	int score = (max? Integer.MIN_VALUE : Integer.MAX_VALUE);
+    	int move = getRandom();
+    	
+    	boolean endOfTree = false;
+    	for (int ambo = 1; ambo <= 6; ambo++)
+        {
+    		if (currentBoard.moveIsPossible(ambo))
+    		{
+    			if (System.currentTimeMillis() - startTime >= time_in_millis) {
+    	    		return new MinMaxReturn(0, true, endOfTree);
+    	    	}
+    			
+    			// Check if the player gets an extra move and call minmax method.
+    			GameState board = currentBoard.clone();
+    			board.makeMove(ambo);
+    			int currentPlayer = (max? player : (player == 1? 2 : 1));
+    			MinMaxReturn result = nextMoveMinimaxDFS(board, (board.getNextPlayer() == currentPlayer? max : !max), 
+    					level + 1, toLevel, startTime, time_in_millis, alpha_score, beta_score);
+    			// Return from branch with "endOfTree" set to true. If there are no better moves go out of the tree and stop the while loop.
+    			if (board.getWinner() == player)
+    				endOfTree = true;
+    			if (result.outOfTree)
+    				return result;
+    			
+    			if (max)
+    			{
+    				if (result.score_move > score)
+    				{
+    					score = result.score_move;
+    					move = ambo;
+    				}
+    				alpha_score = Math.max(alpha_score, score);
+    				if (alpha_score >= beta_score)
+    					break;
+    			}
+    			else if (!max)
+    			{
+    				if (result.score_move < score)
+    				{
+    					score = result.score_move;
+    					move = ambo;
+    				}
+    				beta_score = Math.min(beta_score, score);
+    				if (alpha_score >= beta_score)
+    					break;
+    			}
+    		}
+    	}
+    	
+    	if (System.currentTimeMillis() - startTime >= time_in_millis) {
+    		return new MinMaxReturn(0, true, endOfTree);
+    	}
+    	
+    	if (level == 0){
+    		return new MinMaxReturn(move, false, endOfTree);
+    	}
+    	return new MinMaxReturn(score, false, endOfTree);
     }
 }
