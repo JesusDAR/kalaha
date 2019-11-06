@@ -252,8 +252,7 @@ public class AIClient implements Runnable
      */
     public int getMove(GameState currentBoard)
     {
-        //int myMove = nextMoveMinimaxDFS(currentBoard, true, 0, 4);
-        int myMove = nextMoveIterativeDeepening(currentBoard, 5);
+        int myMove = iterativeDeepening(currentBoard, 5);
         return myMove;
     }
     
@@ -271,121 +270,102 @@ public class AIClient implements Runnable
    
     private int evaluation(GameState board, boolean max)
     {
-    	int oponent = (player == 1? 2 : 1);
-    	return board.getScore(player) - board.getScore(oponent);
+        int oponent = (player == 1? 2 : 1);
+        return board.getScore(player) - board.getScore(oponent);
     }
     
-    private class MinMaxReturn
+    private class GameTree
     {
-    	private int score_move = 1;
-    	private boolean outOfTree = false;
-    	private boolean endOfTree = false;
-    	
-    	public MinMaxReturn(int score_move, boolean outOfTree, boolean endOfTree)
-    	{
-    	   this.score_move = score_move;
-    	   this.outOfTree = outOfTree;
-    	   this.endOfTree = endOfTree;
-    	}
+        private int score = 1;
+        private boolean outOfTree = false;
+        private boolean endOfTree = false;
+
+        public GameTree(int score, boolean outOfTree, boolean endOfTree)
+        {
+           this.score = score;
+           this.outOfTree = outOfTree;
+           this.endOfTree = endOfTree;
+        }
     }
     
-   
-   
-    
-    private int nextMoveIterativeDeepening(GameState currentBoard, int time_seconds)
+    private int iterativeDeepening(GameState currentBoard, long  maxTime)
     {
 
-    	int move = 1;
-    	int level = 1;
-    	
-    	long startTime = System.currentTimeMillis();
-    	long time_in_millis = (long)(time_seconds * 1000);
-    	while(System.currentTimeMillis() - startTime < time_in_millis)
-    	{
-    		MinMaxReturn result = nextMoveMinimaxDFS(currentBoard, true, 0, level, startTime, time_in_millis, Integer.MIN_VALUE, Integer.MAX_VALUE);
-    		// The time have run out, return and use the move from the one level above the tree. 
-    		if (!result.outOfTree)
-    			move = result.score_move;
-    		// The tree can not grow anymore.
-    		if (result.endOfTree)
-    			break;
-    		level++;
-    	}
-    	//saveMove(move, currentBoard);
-    	return move;
-    }
-    
-    /**
-     * Use a minmax tree with Depth-First search
-     * 
-     * @param currentBoard The current game state
-     * @param max If the player is the AI or the opponent
-     * @param level The current level in the minmax tree
-     * @param toLevel Max depth of the minmax tree
-     * @return The move the AI should use
-     */
-    private MinMaxReturn nextMoveMinimaxDFS(GameState currentBoard, boolean max, int level, int toLevel, long startTime,
-    		long time_in_millis, int alpha_score, int beta_score)
-    {
-    	if (level == toLevel)
-    		return new MinMaxReturn(evaluation(currentBoard, max), false, false);
-    	
-    	int score = (max? Integer.MIN_VALUE : Integer.MAX_VALUE);
-    	int move = getRandom();
-    	
-    	boolean endOfTree = false;
-    	for (int ambo = 1; ambo <= 6; ambo++)
+        int move = 1;
+        int level = 1;
+
+        long startTime = System.currentTimeMillis();
+        maxTime = maxTime * 1000; //to milliscconds
+        while(System.currentTimeMillis() - startTime < maxTime)
         {
-    		if (currentBoard.moveIsPossible(ambo))
-    		{
-    			if (System.currentTimeMillis() - startTime >= time_in_millis) {
-    	    		return new MinMaxReturn(0, true, endOfTree);
-    	    	}
-    			
-    			// Check if the player gets an extra move and call minmax method.
-    			GameState board = currentBoard.clone();
-    			board.makeMove(ambo);
-    			int currentPlayer = (max? player : (player == 1? 2 : 1));
-    			MinMaxReturn result = nextMoveMinimaxDFS(board, (board.getNextPlayer() == currentPlayer? max : !max), 
-    					level + 1, toLevel, startTime, time_in_millis, alpha_score, beta_score);
-    			// Return from branch with "endOfTree" set to true. If there are no better moves go out of the tree and stop the while loop.
-    			if (board.getWinner() == player)
-    				endOfTree = true;
-    			if (result.outOfTree)
-    				return result;
-    			
-    			if (max)
-    			{
-    				if (result.score_move > score)
-    				{
-    					score = result.score_move;
-    					move = ambo;
-    				}
-    				alpha_score = Math.max(alpha_score, score);
-    				if (alpha_score >= beta_score)
-    					break;
-    			}
-    			else if (!max)
-    			{
-    				if (result.score_move < score)
-    				{
-    					score = result.score_move;
-    					move = ambo;
-    				}
-    				beta_score = Math.min(beta_score, score);
-    				if (alpha_score >= beta_score)
-    					break;
-    			}
-    		}
-    	}
-    	
-    	if (System.currentTimeMillis() - startTime >= time_in_millis) {
-    		return new MinMaxReturn(0, true, endOfTree);
-    	}
-    	
-    	if (level == 0){
-    		return new MinMaxReturn(move, false, endOfTree);
-    	}
-    	return new MinMaxReturn(score, false, endOfTree);
+                GameTree result = miniMax(currentBoard, true, 0, level, startTime, maxTime, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                
+                if (!result.outOfTree) // The time have run out, return and use the move from the one level above the tree. 
+                        move = result.score;
+               
+                if (result.endOfTree)  // The tree can not grow anymore.
+                        break;
+                level++;
+        }
+        return move;  //saveMove(move, currentBoard);
+    }
+
+    private GameTree miniMax(GameState currentBoard, boolean max, int currentLevel, int maxLevel, long startTime, long maxTime, int alpha, int beta)
+    {
+        if (currentLevel == maxLevel)
+                return new GameTree(evaluation(currentBoard, max), false, false);
+
+        int score = (max? Integer.MIN_VALUE : Integer.MAX_VALUE);
+        int move = getRandom();
+
+        boolean endOfTree = false;
+        for (int i = 1; i <= 6; i++)
+        {
+                if (currentBoard.moveIsPossible(i))
+                {
+                    if (System.currentTimeMillis() - startTime >= maxTime) 
+                         return new GameTree(0, true, endOfTree);
+
+                    GameState board = currentBoard.clone();  // Check if the player gets an extra move and call minmax method.
+                    board.makeMove(i);
+                    int currentPlayer = (max? player : (player == 1? 2 : 1));
+
+                    GameTree tree = miniMax(board, (board.getNextPlayer() == currentPlayer? max : !max), currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);
+
+                    if (board.getWinner() == player) // Return from branch with "endOfTree" set to true. If there are no better moves go out of the tree and stop the while loop.
+                            endOfTree = true;
+                    if (tree.outOfTree)
+                            return tree;
+                    if (max)
+                    {
+                            if (tree.score > score)
+                            {
+                                    score = tree.score;
+                                    move = i;
+                            }
+                            alpha = Math.max(alpha, score);
+                            if (alpha >= beta)
+                                    break;
+                    }
+                    else
+                    {
+                            if (tree.score < score)
+                            {
+                                    score = tree.score;
+                                    move = i;
+                            }
+                            beta = Math.min(beta, score);
+                            if (alpha >= beta)
+                                    break;
+                    }
+                }
+        }
+
+        if (System.currentTimeMillis() - startTime >= maxTime) 
+                return new GameTree(0, true, endOfTree);
+        if (currentLevel == 0)
+                return new GameTree(move, false, endOfTree);
+        
+        return new GameTree(score, false, endOfTree);
     }
 }
