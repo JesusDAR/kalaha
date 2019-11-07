@@ -353,10 +353,8 @@ public class AIClient implements Runnable
                     // Check who is the next player and call minimax
                     int currentPlayerChild = checkCurrentPlayer(max);
                     //if the next player is not our current player, change the turn for the boolean variable
-                    if(board.getNextPlayer() != currentPlayerChild){
-                        max = !max; 
-                    }
-                    GameTree tree = miniMax(board, max, currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);
+                    
+                    GameTree tree = miniMax(board, (board.getNextPlayer() == currentPlayer? max : !max), currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);
 
                     //if we have found the winner, that means we have reach the end of the Game Tree 
                     //so we change that to true
@@ -397,8 +395,11 @@ public class AIClient implements Runnable
         //return all empty, because we don't have found nothing
         if (System.currentTimeMillis() - startTime >= maxTime) 
                 return new GameTree(0, 0, true, endOfTree);
-    
-        // we return the things we have found until that moment.
-        return new GameTree(score, move,  false, endOfTree);
+        //we always store our best move in the top of the tree
+        if(currentLevel == 0){
+            return new GameTree(score, move,  false, endOfTree);
+        }
+        // we return the score we  have found until that moment.
+        return new GameTree(score, 0,  false, endOfTree);
     }
 }
