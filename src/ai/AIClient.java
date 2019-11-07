@@ -321,7 +321,7 @@ public class AIClient implements Runnable
     {
         int move = getRandom();
         
-        int currentPlayer = checkCurrentPlayer(max);
+        
         //if we have reach the top of the iterative deeping before try any move (like the first call), we 
         //just return how is going with the search (check if our AI is winning with that move or no).
         if (currentLevel == maxLevel)
@@ -351,7 +351,7 @@ public class AIClient implements Runnable
                     GameState board = currentBoard.clone();  
                     board.makeMove(i);
                     // Check who is the next player and call minimax
-                    int currentPlayerChild = checkCurrentPlayer(max);
+                    int currentPlayer = checkCurrentPlayer(max);
                     //if the next player is not our current player, change the turn for the boolean variable
                     
                     GameTree tree = miniMax(board, (board.getNextPlayer() == currentPlayer? max : !max), currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);
