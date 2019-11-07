@@ -3,16 +3,10 @@ package ai;
 import ai.Global;
 import java.io.*;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-
 import javax.swing.*;
-import javax.swing.text.html.MinimalHTMLWriter;
-
 import java.awt.*;
 import kalaha.*;
+
 
 /**
  * This is the main class for your Kalaha AI bot. Currently
@@ -32,17 +26,13 @@ public class AIClient implements Runnable
     private boolean running;
     private boolean connected;
     
-    private PrintWriter openingBook;
-    private int winner = -1;
-    private String fileString = "";
-    private ArrayList<ArrayList<Integer>> array;
     	
     /**
      * Creates a new client.
      */
     public AIClient()
     {
-	player = -1;
+        player = -1;
         connected = false;
         
         //This is some necessary client stuff. You don't need
@@ -63,24 +53,7 @@ public class AIClient implements Runnable
             addText("Unable to connect to server");
             return;
         }
-        
-        try {
-        	fileString = new String(Files.readAllBytes(Paths.get("openingBook.data")), StandardCharsets.UTF_8);
-            
-        	/*openingBook = new PrintWriter("openingBook.data", "UTF-8");
-            openingBook.append(fileString);
-            openingBook.close();*/
-		} catch (FileNotFoundException | UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        
-        array = new ArrayList<ArrayList<Integer>>();
     }
-    
     /**
      * Starts the client thread.
      */
@@ -160,13 +133,11 @@ public class AIClient implements Runnable
                     int w = Integer.parseInt(reply);
                     if (w == player)
                     {
-                        addText("I won!");
-                        winner = player;
+                        addText("I won!");;
                     }
                     else
                     {
                         addText("I lost...");
-                        winner = player==1?2:1;
                     }
                     running = false;
                 }
@@ -174,7 +145,6 @@ public class AIClient implements Runnable
                 {
                     addText("Even game!");
                     running = false;
-                    winner = 0;
                 }
 
                 //Check if it is my turn. If so, do a move
@@ -222,14 +192,6 @@ public class AIClient implements Runnable
             running = false;
         }
         
-        // FOR CREATING THE OPENING BOOK
-    	/*try {
-			openingBook = new PrintWriter("openingBook.data", "UTF-8");
-			openingBook.append(fileString+(winner==0?"draw":(winner==player?"ai":"opponent"))+"\n#");
-	        openingBook.close();
-		} catch (FileNotFoundException | UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}*/
         
         try
         {
@@ -252,8 +214,8 @@ public class AIClient implements Runnable
      */
     public int getMove(GameState currentBoard)
     {
-        int myMove = iterativeDeepening(currentBoard, 5);
-        return myMove;
+        int bestMove = iterativeDeepening(currentBoard, 5);
+        return bestMove;
     }
     
     /**
@@ -267,80 +229,131 @@ public class AIClient implements Runnable
         return 1 + (int)(Math.random() * 6);
     }
     
-   
-    private int evaluation(GameState board, boolean max)
-    {
-        int oponent = (player == 1? 2 : 1);
-        return board.getScore(player) - board.getScore(oponent);
-    }
-    
-    private class GameTree
-    {
-        private int score = 1;
-        private boolean outOfTree = false;
-        private boolean endOfTree = false;
+   /** 
+    * returns how is the current player at the moment in the GameTree
+    * we used to calculate information in the tree
+     * @param max if is max turn or min turn
+    * @return current player, if is Max turn, that means our AI is playing
+    * if it is min turn, that means is the turn of our oponent
+   **/
+   public int checkCurrentPlayer(boolean max){
+       int currentPlayer;
+                    if (max){
+                        currentPlayer = player;
+                    }else{
+                        if(player == 1){
+                            currentPlayer = 2;
+                        } else{
+                            currentPlayer = 1;
+                        }
+                    }
+        return currentPlayer;
+   }
 
-        public GameTree(int score, boolean outOfTree, boolean endOfTree)
-        {
-           this.score = score;
-           this.outOfTree = outOfTree;
-           this.endOfTree = endOfTree;
-        }
-    }
-    
-    private int iterativeDeepening(GameState currentBoard, long  maxTime)
+    /** search trough the whole Game True what is the best move we can have using
+     * iterative deeping search.
+     * @param currentBoard the current state of the board game
+     * @param maxTime the time that we want to spend doing the search
+     * @return bestMove for our AI
+     */
+    public int iterativeDeepening(GameState currentBoard, long  maxTime)
     {
 
         int move = 1;
         int level = 1;
-
+        
+        //calculate the times
         long startTime = System.currentTimeMillis();
         maxTime = maxTime * 1000; //to milliscconds
+        
         while(System.currentTimeMillis() - startTime < maxTime)
         {
                 GameTree result = miniMax(currentBoard, true, 0, level, startTime, maxTime, Integer.MIN_VALUE, Integer.MAX_VALUE);
                 
-                if (!result.outOfTree) // The time have run out, return and use the move from the one level above the tree. 
-                        move = result.score;
+                if (!result.getOutTime()) //this means that we didn't end search the whole tree
+                    //just that the time for the iterative deeping (5 seconds) hasn't finished. So we update the move
+                        move = result.getMove();
+                        
                
-                if (result.endOfTree)  // The tree can not grow anymore.
+                if (result.getEndTree())  // if the iterative deeping has finished and we have seen the whole tree, so
+                      //we finish searching the iterative deeping and return the move. 
                         break;
+                //if we didn't found anything a we have reach the top of the iterative deeping,
+                //we add one and start again
                 level++;
         }
-        return move;  //saveMove(move, currentBoard);
+        return move;  
     }
-
-    private GameTree miniMax(GameState currentBoard, boolean max, int currentLevel, int maxLevel, long startTime, long maxTime, int alpha, int beta)
+    
+    /**
+     * minimax decision algorithm to decided what is the best possible move that we can have.
+     * Our best move for us is the move that gives higher score to max and lower score to min. 
+     * (that is the value attached to it)
+     * @param currentBoard board state of the game
+     * @param max if it is min or max turn
+     * @param currentLevel what level are we searching with deeping search
+     * @param maxLevel max level to do the search with the minimax
+     * @param startTime at what time we have started do the search
+     * @param maxTime max time to do the search
+     * @param alpha alpha value to do the alpha-beta prunning
+     * @param beta beta value to do the alpha-beta prunning 
+     * @return the gameTree information, what is the best move until now, what score are we going to get with that move,
+     * if we don't have more time for searching and if we have reach the top of the tree (level 0, end of the tree)
+     */
+    public GameTree miniMax(GameState currentBoard, boolean max, int currentLevel, int maxLevel, long startTime, long maxTime, int alpha, int beta)
     {
-        if (currentLevel == maxLevel)
-                return new GameTree(evaluation(currentBoard, max), false, false);
-
-        int score = (max? Integer.MIN_VALUE : Integer.MAX_VALUE);
         int move = getRandom();
+        
+        int currentPlayer = checkCurrentPlayer(max);
+        //if we have reach the top of the iterative deeping before try any move (like the first call), we 
+        //just return the score that we have until now.
+        if (currentLevel == maxLevel)
+                return new GameTree(currentBoard.getScore(currentPlayer), 0, false, false);
+        
+        //if we are in max, we inizialite the score to the lowest value, because
+        //later we want to maximizie it. And in the other way if we are in min's turn.
+        int score;
+        if (max){
+            score = Integer.MIN_VALUE;
+        } else {
+            score = Integer.MAX_VALUE;
+        }
+
 
         boolean endOfTree = false;
         for (int i = 1; i <= 6; i++)
         {
                 if (currentBoard.moveIsPossible(i))
                 {
+                    //check if the time has passed, if is true we have to 
+                    //return all empty, because we don't have found nothing
                     if (System.currentTimeMillis() - startTime >= maxTime) 
-                         return new GameTree(0, true, endOfTree);
-
-                    GameState board = currentBoard.clone();  // Check if the player gets an extra move and call minmax method.
+                         return new GameTree(0, 0, true, endOfTree);
+                    
+                    //clone the board to make a new child
+                    GameState board = currentBoard.clone();  
                     board.makeMove(i);
-                    int currentPlayer = (max? player : (player == 1? 2 : 1));
+                    // Check who is the next player and call minimax
+                    int currentPlayerChild = checkCurrentPlayer(max);
+                    //if the next player is not our current player, change the turn for the boolean variable
+                    if(board.getNextPlayer() != currentPlayerChild){
+                        max = !max; 
+                    }
+                    GameTree tree = miniMax(board, max, currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);
 
-                    GameTree tree = miniMax(board, (board.getNextPlayer() == currentPlayer? max : !max), currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);
-
-                    if (board.getWinner() == player) // Return from branch with "endOfTree" set to true. If there are no better moves go out of the tree and stop the while loop.
+                    //if we have found the winner, that means we have reach the end of the Game Tree 
+                    //so we change that to true
+                    if (board.getWinner() == player)  
                             endOfTree = true;
-                    if (tree.outOfTree)
+                    //if the time has passed, the outOfTime variable will be true, so we return the things we have until that moment
+                    if (tree.getOutTime())
                             return tree;
+                    //if is max turn, we want the move that give it the higher score
                     if (max)
                     {
-                            if (tree.score > score)
+                            if (tree.getScore() > score)
                             {
-                                    score = tree.score;
+                                    score = tree.getScore();
                                     move = i;
                             }
                             alpha = Math.max(alpha, score);
@@ -348,10 +361,11 @@ public class AIClient implements Runnable
                                     break;
                     }
                     else
+                    //if is the oponent turn, we one the move that give it the LOWEST score
                     {
-                            if (tree.score < score)
+                            if (tree.getScore() < score)
                             {
-                                    score = tree.score;
+                                    score = tree.getScore();
                                     move = i;
                             }
                             beta = Math.min(beta, score);
@@ -360,12 +374,13 @@ public class AIClient implements Runnable
                     }
                 }
         }
-
-        if (System.currentTimeMillis() - startTime >= maxTime) 
-                return new GameTree(0, true, endOfTree);
-        if (currentLevel == 0)
-                return new GameTree(move, false, endOfTree);
         
-        return new GameTree(score, false, endOfTree);
+        
+        //check if the time has passed again after search for a good candidate, if is true we have to 
+        //return all empty, because we don't have found nothing
+        if (System.currentTimeMillis() - startTime >= maxTime) 
+                return new GameTree(0, 0, true, endOfTree);
+        // we return the things we have found until that moment.
+        return new GameTree(score, move,  false, endOfTree);
     }
 }
