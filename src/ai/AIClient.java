@@ -320,13 +320,14 @@ public class AIClient implements Runnable
     public GameTree miniMax(GameState currentBoard, boolean max, int currentLevel, int maxLevel, long startTime, long maxTime, int alpha, int beta)
     {
         int move = getRandom();
-        
+        int evaluateMove = 0;
         
         //if we have reach the top of the iterative deeping before try any move (like the first call), we 
         //just return how is going with the search (check if our AI is winning with that move or no).
-        if (currentLevel == maxLevel)
-                return new GameTree(utilityFunction(currentBoard), 0, false, false);
-        
+        if (currentLevel == maxLevel){
+                evaluateMove = utilityFunction(currentBoard);
+                return new GameTree(evaluateMove, 0, false, false);
+        }
         //if we are in max, we inizialite the score to the lowest value, because
         //later we want to maximizie it. And in the other way if we are in min's turn.
         int score;
@@ -395,11 +396,8 @@ public class AIClient implements Runnable
         //return all empty, because we don't have found nothing
         if (System.currentTimeMillis() - startTime >= maxTime) 
                 return new GameTree(0, 0, true, endOfTree);
-        //we always store our best move in the top of the tree
-        if(currentLevel == 0){
-            return new GameTree(score, move,  false, endOfTree);
-        }
+        
         // we return the score we  have found until that moment.
-        return new GameTree(score, 0,  false, endOfTree);
+        return new GameTree(score, move,  false, endOfTree);
     }
 }
