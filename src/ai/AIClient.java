@@ -214,7 +214,7 @@ public class AIClient implements Runnable
      */
     public int getMove(GameState currentBoard)
     {   
-        long maxTime = 5;
+        long maxTime = 60;
         int bestMove = iterativeDeepening(currentBoard, maxTime);
         return bestMove;
     }
@@ -289,32 +289,31 @@ public class AIClient implements Runnable
      * @param candidate possible move candidate for best move for do the pruning and reduce the number of nodes that we have to check.
      * @param alpha best option till the moment for MAX (highest value)
      * @param beta best option till the moment for MIN (lowest value)
+     * @return we return a  boolean if we can prunning the tree
     **/
    
-   public boolean alphaBetaPrunning(GameTree tree, boolean isMax, int score, int [] move, int candidate, int alpha, int beta)
+   public boolean alphaBetaPrunning(GameTree tree, boolean isMax, int [] score, int [] move, int candidate, int alpha, int beta)
    {
             if(isMax)  //if it's max's turn, we want the move that give it the higher score
             {
-                if (score < tree.getScore())
+                if (score[0] < tree.getScore())
                 {
                     move [0] = candidate;  //change the possible move 
-                    score = tree.getScore(); //update the score 
+                    score[0] = tree.getScore(); //update the score 
                 }
-                alpha = Math.max (alpha, score);
+                alpha = Math.max (alpha, score[0]);
             } 
             else 
             {
-                 if (score > tree.getScore()) //if it's min's turn, we one the move that give it the LOWEST score
+                 if (score[0] > tree.getScore()) //if it's min's turn, we want the move that give it the LOWEST score
                  {
                     move [0] = candidate;  //change the possible move 
-                    score = tree.getScore(); //update the score 
+                    score[0] = tree.getScore(); //update the score 
                 }
-                beta = Math.min (alpha, score);
+                beta = Math.min (alpha, score[0]);
             }
-            if (alpha >= beta)
-                return true; //if we have reach this, we only can found values lower than alpha, so we can pruning the rest and end this function
-            else
-                return false;
+        return (alpha >= beta); //if we have reach this, we only can found values lower than alpha,
+                              //so we can pruning the rest and end this function
     }
    
 
@@ -375,11 +374,11 @@ public class AIClient implements Runnable
                 return new GameTree(evaluateMove, 0, endTime, limitTree);
         }
 
-        int score;
+        int [] score = new int [] {0};
         if (isMax)  //if we are in max, we inizialite the score to the lowest value (worst case), because later we want to maximizie it. And in the other way if we are in min's turn.
-            score = Integer.MIN_VALUE;
+            score [0] = Integer.MIN_VALUE;
         else 
-            score = Integer.MAX_VALUE;
+            score [0] = Integer.MAX_VALUE;
 
         for (int i = 1; i <= 6; i++)  //for every possible move, create a new node.
         {
@@ -418,7 +417,7 @@ public class AIClient implements Runnable
                 endTime = true;
                 return new GameTree(0, 0, endTime, limitTree);
         }
-        return new GameTree(score, move[0],  false, limitTree); // we return the score and the move we  have found until that moment.
+        return new GameTree(score[0], move[0],  false, limitTree); // we return the score and the move we  have found until that moment.
     }
  
  }
