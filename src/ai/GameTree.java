@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ai;
 
 /**
@@ -14,17 +9,17 @@ package ai;
         //ATTRIBUTES
         private int score = 1; //here we store de current score of this node
         private int move = 1;  //here we store de current move of this node
-        private boolean outOfTime = false; //here we store if we have reach the 
+        private boolean endTime = false; //here we store if we have reach the 
                                            //max time for the deeping search
-        private boolean endOfTree = false; //here we store if we have reach the end of the
-                                           //tree and we already found a winner
+        private boolean LimitTree = false; //here we store if we have reach the end of the
+                                           //tree and we've already found a winner
         //CONSTRUCTORS
-        public GameTree(int score, int move, boolean outOfTime, boolean endOfTree)
+        public GameTree(int score, int move, boolean endTime, boolean LimitTree)
         {
            this.score = score;
            this.move = move;
-           this.outOfTime = outOfTime;
-           this.endOfTree = endOfTree;
+           this.endTime = endTime;
+           this.LimitTree = LimitTree;
         }
        
         //GETTERS
@@ -36,11 +31,11 @@ package ai;
             return move;
         }
         
-        public boolean getOutTime(){
-            return outOfTime;
+        public boolean getEndTime(){
+            return endTime;
         }
         
-        public boolean getEndTree(){
-            return endOfTree;
+        public boolean getLimitTree(){
+            return LimitTree;
         }
     }
