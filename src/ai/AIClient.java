@@ -250,7 +250,12 @@ public class AIClient implements Runnable
                     }
         return currentPlayer;
    }
-   
+   /**check if the next turn is still a max's move or is now a min's move.
+    * 
+    * @param currentBoard the current state of the board
+    * @param currentPlayer the player that now has the next move
+    * @return if the next is Max or not. 
+    */ 
    public boolean isMaxTurn(GameState currentBoard, int currentPlayer){
        return currentBoard.getNextPlayer() == currentPlayer;
    }
@@ -366,12 +371,14 @@ public class AIClient implements Runnable
     {
         int move = getRandom();
         int evaluateMove;
+        boolean limitTree = false;
+        boolean endTime = false;
         
         //if we have reach the limit of the iterative deeping before try any move (like the first call), we 
         //just return the heuristic value of the node.
         if (currentLevel == maxLevel){
                 evaluateMove = utilityFunction(currentBoard);
-                return new GameTree(evaluateMove, 0, false, false);
+                return new GameTree(evaluateMove, 0, endTime, limitTree);
         }
         
         //if we are in max, we inizialite the score to the lowest value (worst case), because
@@ -384,7 +391,7 @@ public class AIClient implements Runnable
         }
 
 
-        boolean limitTree = false;
+
         //for every possible move, create a new node.
         for (int i = 1; i <= 6; i++)
         {
@@ -392,9 +399,10 @@ public class AIClient implements Runnable
                 {
                     //check if the time has passed, if is true we have to 
                     //return all empty, because we don't have found nothing
-                    if (System.currentTimeMillis() - startTime >= maxTime) 
-                         return new GameTree(0, 0, true, limitTree);
-                    
+                    if (System.currentTimeMillis() - startTime >= maxTime){
+                         endTime = true;
+                         return new GameTree(0, 0, endTime, limitTree);
+                    }
                     //clone the board to make a new child
                     GameState childBoard = currentBoard.clone();  
                     childBoard.makeMove(i);
@@ -431,9 +439,11 @@ public class AIClient implements Runnable
         
         //check if the time has passed again after search for a good candidate, if is true we have to 
         //return all empty, because we have to end the search and just stay which we have found until that moment
-        if (System.currentTimeMillis() - startTime >= maxTime) 
-                return new GameTree(0, 0, true, limitTree);
-        
+        if (System.currentTimeMillis() - startTime >= maxTime){
+                         endTime = true;
+                         return new GameTree(0, 0, endTime, limitTree);
+                    }
+                    //
         // we return the score and the move we  have found until that moment.
         return new GameTree(score, move,  false, limitTree);
     }
