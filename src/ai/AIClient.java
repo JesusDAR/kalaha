@@ -285,16 +285,23 @@ public class AIClient implements Runnable
     **/
    
    public void alphaBetaPrunning(GameTree tree, boolean max, int score, int move, int candidate, int alpha, int beta){
-                   //update the score and the possible move if we have one different
-                   if (tree.getScore() != score){
-                       score = tree.getScore();
-                       move = candidate;
-                   }
                    if(max){
                        //if it's max's turn, we want the move that give it the higher score
+                       if (score < tree.getScore()){
+                           //change the possible move 
+                           move = candidate;
+                           //update the score 
+                           score = tree.getScore();
+                       }
                        alpha = Math.max (alpha, score);
                    } else {
                        //if it's min's turn, we one the move that give it the LOWEST score
+                        if (score > tree.getScore()){
+                           //change the possible move 
+                           move = candidate;
+                           //update the score 
+                           score = tree.getScore();
+                       }
                        beta = Math.min (alpha, score);
                    }
                    if (alpha >= beta)
