@@ -286,18 +286,18 @@ public class AIClient implements Runnable
      * @param isMax which turn is max or min
      * @param score score auxiliar variable
      * @param move move auxiliar variable
-     * @param candidate possible move candidate for best move for do the prunning and reduce the number of nodes that we have to check.
+     * @param candidate possible move candidate for best move for do the pruning and reduce the number of nodes that we have to check.
      * @param alpha best option till the moment for MAX (highest value)
      * @param beta best option till the moment for MIN (lowest value)
     **/
    
-   public void alphaBetaPrunning(GameTree tree, boolean isMax, int score, int move, int candidate, int alpha, int beta)
+   public boolean alphaBetaPrunning(GameTree tree, boolean isMax, int score, int [] move, int candidate, int alpha, int beta)
    {
             if(isMax)  //if it's max's turn, we want the move that give it the higher score
             {
                 if (score < tree.getScore())
                 {
-                    move = candidate;  //change the possible move 
+                    move [0] = candidate;  //change the possible move 
                     score = tree.getScore(); //update the score 
                 }
                 alpha = Math.max (alpha, score);
@@ -306,13 +306,15 @@ public class AIClient implements Runnable
             {
                  if (score > tree.getScore()) //if it's min's turn, we one the move that give it the LOWEST score
                  {
-                    move = candidate;  //change the possible move 
+                    move [0] = candidate;  //change the possible move 
                     score = tree.getScore(); //update the score 
                 }
                 beta = Math.min (alpha, score);
             }
             if (alpha >= beta)
-                return; //if we have reach this, we only can found values lower than alpha, so we can prunning the rest and end this function
+                return true; //if we have reach this, we only can found values lower than alpha, so we can pruning the rest and end this function
+            else
+                return false;
     }
    
 
@@ -326,13 +328,14 @@ public class AIClient implements Runnable
     {
         int possibleMove = 1;
         int depth = 1;
+        int currentLevel = 0;
 
         long startTime = System.currentTimeMillis(); //calculate the times
         maxTime = maxTime * 1000; //change from seconds to milliseconds
         
         while(System.currentTimeMillis() - startTime < maxTime)
         {
-                GameTree auxiliarTree = miniMax(currentBoard, true, 0, depth, startTime, maxTime, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                GameTree auxiliarTree = miniMax(currentBoard,  currentLevel, depth, true, Integer.MIN_VALUE, Integer.MAX_VALUE,  startTime, maxTime);
                 if (!auxiliarTree.getEndTime())  //the time for the iterative deeping (5 seconds) hasn't finished so we didn't stop searching.   //We update the possible move
                         possibleMove = auxiliarTree.getMove();
                 
@@ -349,19 +352,19 @@ public class AIClient implements Runnable
      * Our best move for us is the move that gives higher score to max and lower score to min. 
      * (that is the value attached to it)
      * @param currentBoard board state of the game
-     * @param isMax if it is max or min turn
      * @param currentLevel what level are we searching with deeping search
      * @param maxLevel max level to do the search with the minimax
+     * @param isMax if it is max or min turn
      * @param startTime at what time we have started do the search
+     * @param alpha alpha value to do the alpha-beta pruning
+     * @param beta beta value to do the alpha-beta pruning 
      * @param maxTime max time to do the search
-     * @param alpha alpha value to do the alpha-beta prunning
-     * @param beta beta value to do the alpha-beta prunning 
      * @return the gameTree information, what is the best move until now, what score are we going to get with that move,
      * if we don't have more time for searching and if we have reach the top of the tree (level 0, end of the tree)
      */
-    public GameTree miniMax(GameState currentBoard, boolean isMax, int currentLevel, int maxLevel, long startTime, long maxTime, int alpha, int beta)
+    public GameTree miniMax(GameState currentBoard,  int currentLevel, int maxLevel, boolean isMax, int alpha, int beta, long startTime, long maxTime)
     {
-        int move = getRandom();
+        int [] move = new int [] {getRandom()};
         int evaluateMove;
         boolean limitTree = false;
         boolean endTime = false;
@@ -396,8 +399,7 @@ public class AIClient implements Runnable
                     
                     if(!isMaxTurn(childBoard, currentPlayer)) //if the next player is not our current player, change the turn for the boolean variable
                         isMax  = !isMax;
-                   
-                    GameTree tree = miniMax(childBoard, isMax, currentLevel + 1, maxLevel, startTime, maxTime, alpha, beta);  //recursive call
+                    GameTree tree = miniMax(childBoard, currentLevel + 1, maxLevel, isMax, alpha, beta, startTime, maxTime);  //recursive call
 
                     boolean haveWinner = childBoard.getWinner() == player;  //if we have found the winner, that means we have reach the end of the Game Tree  so we change that to true
                     if (haveWinner)  
@@ -406,7 +408,8 @@ public class AIClient implements Runnable
                     if (tree.getEndTime()) //if we have reach the max time so we return the things we have until that moment
                             return tree;
 
-                    alphaBetaPrunning(tree, isMax, score, move, i, alpha, beta);  //here you search for the best move if is max's turn, and for the  worst move if is min's turn, using the alphaBeta prunning to be more fast.  
+                    if (alphaBetaPrunning(tree, isMax, score, move, i, alpha, beta)) //here you search for the best move if is max's turn, and for the  worst move if is min's turn, using the alphaBeta pruning to be more fast.  
+                        break;
                 }
         }
 
@@ -415,7 +418,7 @@ public class AIClient implements Runnable
                 endTime = true;
                 return new GameTree(0, 0, endTime, limitTree);
         }
-        return new GameTree(score, move,  false, limitTree); // we return the score and the move we  have found until that moment.
+        return new GameTree(score, move[0],  false, limitTree); // we return the score and the move we  have found until that moment.
     }
  
  }
