@@ -214,7 +214,7 @@ public class AIClient implements Runnable
      */
     public int getMove(GameState currentBoard)
     {   
-        long maxTime = 60;
+        long maxTime = 5;
         int bestMove = iterativeDeepening(currentBoard, maxTime);
         return bestMove;
     }
@@ -366,6 +366,7 @@ public class AIClient implements Runnable
     public GameTree miniMax(GameState currentBoard,  int currentLevel, int maxLevel, boolean isMax, int alpha, int beta, long startTime, long maxTime)
     {
         int [] move = new int [] {1};
+        int [] score = new int [] {0};
         int evaluateMove;
         boolean limitTree = false;
         boolean endTime = false;
@@ -375,8 +376,7 @@ public class AIClient implements Runnable
                 evaluateMove = utilityFunction(currentBoard);
                 return new GameTree(evaluateMove, 0, endTime, limitTree);
         }
-
-        int [] score = new int [] {0};
+       
         if (isMax)  //if we are in max, we inizialite the score to the lowest value (worst case), because later we want to maximizie it. And in the other way if we are in min's turn.
             score [0] = Integer.MIN_VALUE;
         else 
