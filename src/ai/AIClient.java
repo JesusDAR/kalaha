@@ -270,6 +270,8 @@ public class AIClient implements Runnable
    public int utilityFunction(GameState board)
    {
        int oponent;
+       
+       
        if(player == 1)
            oponent = 2;
        else
@@ -364,7 +366,7 @@ public class AIClient implements Runnable
      */
     public GameTree miniMax(GameState currentBoard,  int currentLevel, int maxLevel, boolean isMax, int alpha, int beta, long startTime, long maxTime)
     {
-        int [] move = new int [] {getRandom()};
+        int [] move = new int [] {1};
         int evaluateMove;
         boolean limitTree = false;
         boolean endTime = false;
