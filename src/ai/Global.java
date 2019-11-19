@@ -9,6 +9,9 @@ package ai;
 public class Global 
 {
     private static boolean firstTaken = false;
+    public static long maxTime  = 5;
+    public static int startCurrentLevel  = 0;
+    public static int startMaxLevel  = 1;
     
     /**
      * Used by the GUI to find where to place a new
